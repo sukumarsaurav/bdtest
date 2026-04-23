@@ -35,6 +35,9 @@ export default function LoginForm() {
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
         scopes: 'email',
+        queryParams: {
+          prompt: 'select_account',
+        },
       },
     })
   }
@@ -46,7 +49,7 @@ export default function LoginForm() {
           {error}
         </div>
       )}
-      
+
       <form onSubmit={handleEmailLogin} className="space-y-4">
         <div>
           <label className="block text-xs font-bold text-flix-charcoal tracking-wide mb-1.5">
@@ -97,7 +100,7 @@ export default function LoginForm() {
         onClick={handleMicrosoftLogin}
         className="flex h-10 w-full items-center justify-center space-x-3 rounded-md border border-gray-200 bg-flix-white px-4 py-2 text-sm font-bold text-flix-charcoal shadow-sm transition-all hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-200 focus:ring-offset-1"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 21 21"><path fill="#f25022" d="M1 1h9v9H1z"/><path fill="#00a4ef" d="M1 11h9v9H1z"/><path fill="#7fba00" d="M11 1h9v9h-9z"/><path fill="#ffb900" d="M11 11h9v9h-9z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 21 21"><path fill="#f25022" d="M1 1h9v9H1z" /><path fill="#00a4ef" d="M1 11h9v9H1z" /><path fill="#7fba00" d="M11 1h9v9h-9z" /><path fill="#ffb900" d="M11 11h9v9h-9z" /></svg>
         <span>Microsoft</span>
       </button>
     </div>
