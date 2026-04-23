@@ -1,0 +1,85 @@
+'use client'
+
+import { useStore } from '@/store/useStore'
+import { Change } from '@/types'
+import { fmtMoney, fmtPerKm } from '@/lib/formatters'
+import LineSearchSelect from '../LineSearchSelect'
+
+interface Props {
+  change: Change
+  scenarioUid: number
+}
+
+export default function RestStop({ change, scenarioUid }: Props) {
+  const updateChange = useStore((s) => s.updateChange)
+  const lines = useStore((s) => s.lines)
+
+  const showEur = useStore((s) => s.showEur)
+  const eurRate = useStore((s) => s.eurRate)
+
+  const update = (u: Partial<Change>) => updateChange(scenarioUid, change.cid, u)
+
+  const selectedLine = change.baselineLineId
+    ? lines.find((l) => l.code === change.baselineLineId)
+    : null
+
+  const stops = change.restStopsAdded || 0
+  const costPerStop = change.restStopCost || 0
+
+  // stopsAdded * costPerStop * rt * buses / 100000
+  const monthlyImpact = selectedLine
+    ? (stops * costPerStop * selectedLine.rt * selectedLine.buses) / 100000
+    : 0
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="md:col-span-3">
+          <label className="block text-xs text-gray-500 mb-1">Line</label>
+          <LineSearchSelect
+            lines={lines}
+            value={change.baselineLineId || ''}
+            onChange={(code) => update({ baselineLineId: code })}
+            placeholder="Search by line code, route or partner..."
+          />
+        </div>
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">Stops Added / Trip</label>
+          <input
+            type="number"
+            min={0}
+            value={change.restStopsAdded || ''}
+            onChange={(e) => update({ restStopsAdded: +e.target.value })}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#73D700] outline-none"
+            placeholder="e.g. 1"
+          />
+        </div>
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">Cost / Stop ({showEur ? '€' : '₹'})</label>
+          <input
+            type="number"
+            value={change.restStopCost || ''}
+            onChange={(e) => update({ restStopCost: +e.target.value })}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#73D700] outline-none"
+            placeholder="e.g. 500"
+          />
+        </div>
+      </div>
+
+      {selectedLine && stops > 0 && costPerStop > 0 && (
+        <div className="rounded-lg bg-gray-50 p-3 text-sm space-y-1">
+          <div className="flex justify-between">
+            <span className="text-gray-500">Cost formula:</span>
+            <span className="text-gray-600 text-xs">{stops} stop(s) x {fmtMoney(costPerStop / 100000, showEur, eurRate)} x {selectedLine.rt} RT x {selectedLine.buses} buses</span>
+          </div>
+          <div className="flex justify-between border-t border-gray-200 pt-1">
+            <span className="text-gray-600 font-medium">Monthly Impact:</span>
+            <span className={`font-semibold ${monthlyImpact > 0 ? 'text-[#FFAD00]' : 'text-[#73D700]'}`}>
+              {monthlyImpact >= 0 ? '+' : ''}{fmtMoney(monthlyImpact, showEur, eurRate)}
+            </span>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
