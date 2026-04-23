@@ -1,8 +1,14 @@
 import { createClient } from '@/utils/supabase/server'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { BASE_LINES } from '@/lib/baseline'
 import { effectiveMinG, deltaVsPc5, computeHealthVsPc5 } from '@/lib/cost-utils'
 import type { SeasonalityMap } from '@/lib/cost-utils'
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+}
 
 // Force dynamic — this route reads from Supabase at runtime
 export const dynamic = 'force-dynamic'

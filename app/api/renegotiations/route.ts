@@ -1,6 +1,12 @@
 import { createClient } from '@/utils/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+}
+
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
@@ -13,13 +19,13 @@ function isMissingTable(err: { code?: string; message?: string } | null): boolea
 
 /** Valid status transitions. Key = from, value = allowed destinations. */
 const TRANSITIONS: Record<string, string[]> = {
-  identified:       ['proposed', 'rejected'],
-  proposed:         ['in_discussion', 'rejected'],
-  pitched:          ['in_discussion', 'rejected'],
-  in_discussion:    ['agreed', 'rejected'],
-  agreed:           ['pending_approval', 'rejected'],
+  identified: ['proposed', 'rejected'],
+  proposed: ['in_discussion', 'rejected'],
+  pitched: ['in_discussion', 'rejected'],
+  in_discussion: ['agreed', 'rejected'],
+  agreed: ['pending_approval', 'rejected'],
   pending_approval: ['effective', 'in_discussion', 'rejected'],
-  rejected:         ['proposed'],
+  rejected: ['proposed'],
 }
 
 const GST_MULT = (slab: number) => slab === 18 ? 1.13 : 1.0
@@ -118,58 +124,58 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401, headers: corsHeaders })
 
   try {
-  const body = await req.json()
+    const body = await req.json()
 
-  // Auto-populate old_min_g and old_gst_slab from bl2
-  const { data: bl2 } = body.line_id
-    ? await supabase.from('bl2').select('min_g, gst_slab, partner, region, line_name').eq('line_id', body.line_id).single()
-    : { data: null }
+    // Auto-populate old_min_g and old_gst_slab from bl2
+    const { data: bl2 } = body.line_id
+      ? await supabase.from('bl2').select('min_g, gst_slab, partner, region, line_name').eq('line_id', body.line_id).single()
+      : { data: null }
 
-  // Check for duplicate active renegotiation
-  if (body.line_id) {
-    const { data: existing } = await supabase
-      .from('renegotiations')
-      .select('id, status')
-      .eq('line_id', body.line_id)
-      .not('status', 'in', '("rejected","effective")')
-    if (existing && existing.length > 0) {
-      return NextResponse.json(
-        { error: `Active renegotiation already exists for ${body.line_id} (id: ${existing[0].id})` },
-        { status: 409 },
-      )
+    // Check for duplicate active renegotiation
+    if (body.line_id) {
+      const { data: existing } = await supabase
+        .from('renegotiations')
+        .select('id, status')
+        .eq('line_id', body.line_id)
+        .not('status', 'in', '("rejected","effective")')
+      if (existing && existing.length > 0) {
+        return NextResponse.json(
+          { error: `Active renegotiation already exists for ${body.line_id} (id: ${existing[0].id})` },
+          { status: 409 },
+        )
+      }
     }
-  }
 
-  // Build insert payload with only known columns
-  const insertPayload: Record<string, unknown> = {
-    line_id: body.line_id,
-    line_name: body.line_name ?? bl2?.line_name ?? null,
-    partner: body.partner ?? bl2?.partner ?? null,
-    region: body.region ?? bl2?.region ?? null,
-    current_min_g: body.current_min_g ?? bl2?.min_g ?? body.old_min_g ?? null,
-    target_min_g: body.target_min_g ? parseFloat(body.target_min_g) : null,
-    old_ming: body.old_min_g ?? bl2?.min_g ?? null,
-    old_gst_slab: body.old_gst_slab ?? bl2?.gst_slab ?? null,
-    new_gst_slab: body.new_gst_slab ?? null,
-    status: body.status || 'proposed',
-    priority_score: body.priority_score ?? 0,
-    monthly_savings: body.monthly_savings ?? 0,
-    owner: body.owner || null,
-    notes: body.notes || null,
-    affected_buses: body.affected_buses ?? null,
-    input_mode: body.input_mode || 'delta',
-    status_changed_at: new Date().toISOString(),
-    status_history: JSON.stringify([
-      { status: body.status || 'proposed', at: new Date().toISOString(), by: body.owner || 'system' },
-    ]),
-  }
+    // Build insert payload with only known columns
+    const insertPayload: Record<string, unknown> = {
+      line_id: body.line_id,
+      line_name: body.line_name ?? bl2?.line_name ?? null,
+      partner: body.partner ?? bl2?.partner ?? null,
+      region: body.region ?? bl2?.region ?? null,
+      current_min_g: body.current_min_g ?? bl2?.min_g ?? body.old_min_g ?? null,
+      target_min_g: body.target_min_g ? parseFloat(body.target_min_g) : null,
+      old_ming: body.old_min_g ?? bl2?.min_g ?? null,
+      old_gst_slab: body.old_gst_slab ?? bl2?.gst_slab ?? null,
+      new_gst_slab: body.new_gst_slab ?? null,
+      status: body.status || 'proposed',
+      priority_score: body.priority_score ?? 0,
+      monthly_savings: body.monthly_savings ?? 0,
+      owner: body.owner || null,
+      notes: body.notes || null,
+      affected_buses: body.affected_buses ?? null,
+      input_mode: body.input_mode || 'delta',
+      status_changed_at: new Date().toISOString(),
+      status_history: JSON.stringify([
+        { status: body.status || 'proposed', at: new Date().toISOString(), by: body.owner || 'system' },
+      ]),
+    }
 
-  const { data, error } = await supabase.from('renegotiations').insert(insertPayload).select().single()
-  if (error) {
-    if (isMissingTable(error)) return NextResponse.json({ error: 'table missing' }, { status: 503 })
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
-  return NextResponse.json(data, { status: 201 })
+    const { data, error } = await supabase.from('renegotiations').insert(insertPayload).select().single()
+    if (error) {
+      if (isMissingTable(error)) return NextResponse.json({ error: 'table missing' }, { status: 503 })
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+    return NextResponse.json(data, { status: 201 })
   } catch (err: any) {
     console.error('POST /api/renegotiations error:', err)
     return NextResponse.json({ error: err?.message || 'Unknown error' }, { status: 500 })
@@ -179,6 +185,10 @@ export async function POST(req: NextRequest) {
 // ─── PATCH ──────────────────────────────────────────────────────────────────
 
 export async function PATCH(req: NextRequest) {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401, headers: corsHeaders })
+
   const id = req.nextUrl.searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
 
