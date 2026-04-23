@@ -1,5 +1,5 @@
 import { createClient } from '@/utils/supabase/server'
-import Link from 'next/link'
+import SignOutToLoginButton from '@/components/SignOutToLoginButton'
 
 export default async function UnauthorizedPage() {
     const supabase = createClient()
@@ -17,9 +17,7 @@ export default async function UnauthorizedPage() {
                 <p className="text-sm text-gray-500 mb-6">
                     The account <strong>{user?.email || 'unknown'}</strong> is not authorized to access this internal tool. Please sign in with an approved Flix email address.
                 </p>
-                <Link href="/login" className="inline-flex h-10 w-full items-center justify-center rounded-md border border-transparent bg-flix-green px-4 py-2 text-sm font-bold text-flix-charcoal transition-all hover:bg-opacity-90">
-                    Sign In with Different Account
-                </Link>
+                <SignOutToLoginButton />
             </div>
         </div>
     )
